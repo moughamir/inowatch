@@ -18,6 +18,7 @@ impl<W: Write> Emitter<W> {
     }
 
     /// Write the startup banner as the first record.
+    #[allow(dead_code)]
     pub fn emit_banner(&mut self, banner: &Banner) -> io::Result<()> {
         let json = serde_json::to_string(banner)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;

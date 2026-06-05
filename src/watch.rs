@@ -4,7 +4,9 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
+use std::sync::Arc;
 
 /// Size of the buffer for reading inotify events — enough for many events per read.
 const EVENT_BUF_SIZE: usize = 65_536;
@@ -55,6 +57,7 @@ impl Watcher {
     }
 
     /// The raw inotify file descriptor.
+    #[allow(dead_code)]
     pub fn fd(&self) -> RawFd {
         self.fd
     }
@@ -170,9 +173,30 @@ impl Watcher {
         }
     }
 
-    /// Read available inotify events from the fd. Blocks until at least one
-    /// event is available. Returns a list of RawEvents.
-    pub fn read_events(&self) -> std::io::Result<Vec<RawEvent>> {
+    const POLL_TIMEOUT_MS: i32 = 500;
+
+    /// Read available inotify events from the fd.
+    /// Uses `poll()` with a timeout so the caller can detect inactivity.
+    /// Returns `Ok(None)` on timeout (no events available).
+    /// Returns `Ok(Some(events))` when events are read.
+    pub fn read_events_poll(&self) -> std::io::Result<Option<Vec<RawEvent>>> {
+        let mut pfd = libc::pollfd {
+            fd: self.fd,
+            events: libc::POLLIN,
+            revents: 0,
+        };
+        let ret = unsafe { libc::poll(&mut pfd, 1, Self::POLL_TIMEOUT_MS) };
+        if ret < 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+        if ret == 0 {
+            return Ok(None);
+        }
+        self.read_events_raw().map(Some)
+    }
+
+    /// Actually read inotify events from the fd (blocking, assumes data is ready).
+    fn read_events_raw(&self) -> std::io::Result<Vec<RawEvent>> {
         let mut buf = [0u8; EVENT_BUF_SIZE];
         let n = unsafe { libc::read(self.fd, buf.as_mut_ptr() as *mut libc::c_void, EVENT_BUF_SIZE) };
         if n == -1 {
@@ -267,6 +291,7 @@ impl Watcher {
     }
 
     /// Get a reference to the wd→path map.
+    #[allow(dead_code)]
     pub fn watched_paths(&self) -> &HashMap<i32, PathBuf> {
         &self.wd_to_path
     }
@@ -286,17 +311,19 @@ impl Drop for Watcher {
     }
 }
 
-/// Run the watcher event loop. Reads events from the Watcher, handles
-/// recursive watch updates (new directories), and sends RawEvents into
-/// the provided sender. Runs until the channel closes or an unrecoverable
-/// error occurs.
 pub fn run_event_loop(
     watcher: &mut Watcher,
     sender: mpsc::Sender<RawEvent>,
+    stop: Arc<AtomicBool>,
 ) -> std::io::Result<()> {
     loop {
-        let raw_events = match watcher.read_events() {
-            Ok(events) => events,
+        if stop.load(Ordering::Relaxed) {
+            return Ok(());
+        }
+
+        let raw_events = match watcher.read_events_poll() {
+            Ok(Some(events)) => events,
+            Ok(None) => continue, // poll timed out, loop back to check stop
             Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
             Err(e) => {
                 eprintln!("Error reading inotify events: {}", e);
@@ -305,7 +332,6 @@ pub fn run_event_loop(
         };
 
         for event in &raw_events {
-            // If a new directory was created, start watching it.
             if event.kind == EventType::Create && event.is_dir {
                 if let Err(e) = watcher.add_watch(&event.path) {
                     eprintln!(
@@ -316,13 +342,10 @@ pub fn run_event_loop(
                 }
             }
 
-            // If a watched directory was deleted, clean up.
             if event.kind == EventType::Delete && event.is_dir {
                 watcher.remove_watch_by_path(&event.path);
             }
 
-            // Send event downstream. If the receiver is dropped (coalescer
-            // stopped), exit the loop.
             if sender.send(event.clone()).is_err() {
                 return Ok(());
             }
@@ -388,13 +411,13 @@ mod tests {
         let mut watcher = Watcher::new(true).unwrap();
         watcher.add_watch(&dir).unwrap();
 
-        // Create a file — should generate an event.
         std::fs::write(&dir.join("newfile.txt"), b"data").unwrap();
 
-        // Small sleep to let inotify deliver the event.
         std::thread::sleep(std::time::Duration::from_millis(50));
 
-        let events = watcher.read_events().unwrap();
+        let maybe_events = watcher.read_events_poll().unwrap();
+        assert!(maybe_events.is_some(), "should have events available");
+        let events = maybe_events.unwrap();
         assert!(!events.is_empty(), "should have at least one event");
 
         let has_create = events.iter().any(|e| e.kind == EventType::Create);
