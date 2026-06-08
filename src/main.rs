@@ -17,7 +17,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// File Watch Daemon — watches filesystem changes and emits NDJSON to stdout.
 /// Use --mcp for Model Context Protocol (JSON-RPC 2.0) mode on stdin/stdout.
 #[derive(Parser, Debug)]
-#[command(name = "fwd", version = VERSION, about)]
+#[command(name = "inowatch", version = VERSION, about)]
 struct Args {
     /// Directories/files to watch (not needed in --mcp mode).
     #[arg(required_unless_present = "mcp")]
@@ -111,7 +111,7 @@ fn main() {
         let stop = stop.clone();
         let raw_tx = raw_tx.clone();
         thread::Builder::new()
-            .name("fwd-watcher".into())
+            .name("inowatch-watcher".into())
             .spawn(move || {
                 if let Err(e) = watch::run_event_loop(&mut watcher, raw_tx, stop) {
                     eprintln!("Watcher error: {}", e);
@@ -122,7 +122,7 @@ fn main() {
 
     let coalescer_handle = {
         thread::Builder::new()
-            .name("fwd-coalescer".into())
+            .name("inowatch-coalescer".into())
             .spawn(move || {
                 let mut coalescer =
                     coalesce::Coalescer::new(raw_rx, batch_tx, args.debounce);
@@ -141,7 +141,7 @@ fn main() {
 
     let emitter_handle = {
         thread::Builder::new()
-            .name("fwd-emitter".into())
+            .name("inowatch-emitter".into())
             .spawn(move || {
                 let stdout = std::io::stdout();
                 let mut emitter = emit::Emitter::new(stdout.lock(), batch_rx);

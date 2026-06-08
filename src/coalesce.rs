@@ -269,11 +269,11 @@ mod tests {
         let handle = std::thread::spawn(move || co.run());
 
         // Send rapid modify events for the same file.
-        raw_tx.send(make_raw("/tmp/fwd-test-dedup.txt", EventType::Modify, None, false)).unwrap();
+        raw_tx.send(make_raw("/tmp/inowatch-test-dedup.txt", EventType::Modify, None, false)).unwrap();
         std::thread::sleep(Duration::from_millis(5));
-        raw_tx.send(make_raw("/tmp/fwd-test-dedup.txt", EventType::Modify, None, false)).unwrap();
+        raw_tx.send(make_raw("/tmp/inowatch-test-dedup.txt", EventType::Modify, None, false)).unwrap();
         std::thread::sleep(Duration::from_millis(5));
-        raw_tx.send(make_raw("/tmp/fwd-test-dedup.txt", EventType::Modify, None, false)).unwrap();
+        raw_tx.send(make_raw("/tmp/inowatch-test-dedup.txt", EventType::Modify, None, false)).unwrap();
 
         // Wait for debounce to flush.
         std::thread::sleep(Duration::from_millis(150));
@@ -298,7 +298,7 @@ mod tests {
         let handle = std::thread::spawn(move || co.run());
 
         // Simulate rename: MOVED_FROM then MOVED_TO with same cookie.
-        let dir = std::env::temp_dir().join("fwd-test-rename-pair");
+        let dir = std::env::temp_dir().join("inowatch-test-rename-pair");
         let _ = std::fs::create_dir_all(&dir);
         let src = dir.join("old.txt");
         let dst = dir.join("new.txt");

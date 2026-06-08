@@ -367,13 +367,13 @@ mod tests {
     fn test_add_watch_nonexistent() {
         let mut watcher = Watcher::new(false).unwrap();
         // Should not panic, just warn.
-        let result = watcher.add_watch("/tmp/nonexistent-fwd-test-12345");
+        let result = watcher.add_watch("/tmp/nonexistent-inowatch-test-12345");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_add_watch_file() {
-        let dir = std::env::temp_dir().join("fwd-test-file-watch");
+        let dir = std::env::temp_dir().join("inowatch-test-file-watch");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("test.txt");
@@ -388,7 +388,7 @@ mod tests {
 
     #[test]
     fn test_add_watch_recursive() {
-        let dir = std::env::temp_dir().join("fwd-test-recursive");
+        let dir = std::env::temp_dir().join("inowatch-test-recursive");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir.join("a/b/c")).unwrap();
         std::fs::write(&dir.join("a/hello.txt"), b"hello").unwrap();
@@ -404,7 +404,7 @@ mod tests {
 
     #[test]
     fn test_read_events_create_file() {
-        let dir = std::env::temp_dir().join("fwd-test-read-events");
+        let dir = std::env::temp_dir().join("inowatch-test-read-events");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -428,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_watch_count_zero_after_remove() {
-        let dir = std::env::temp_dir().join("fwd-test-remove-count");
+        let dir = std::env::temp_dir().join("inowatch-test-remove-count");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 

@@ -4,7 +4,7 @@
 ///   - JSON-RPC 2.0 message framing (newline-delimited over stdin/stdout)
 ///   - Initialize / Initialized lifecycle
 ///   - Tools: watch_directory, unwatch, list_watches, status
-///   - Resources: file:// URIs, fwd://watches meta-resource
+///   - Resources: file:// URIs, inowatch://watches meta-resource
 ///
 /// No async runtime — pure blocking I/O with BufReader/BufWriter.
 use serde_json::{json, Value};
@@ -13,7 +13,7 @@ use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
 const PROTOCOL_VERSION: &str = "2025-11-25";
-const SERVER_NAME: &str = "fwd";
+const SERVER_NAME: &str = "inowatch";
 
 /// MCP server state.
 pub struct McpServer {
@@ -402,7 +402,7 @@ impl McpServer {
         id: Option<&Value>,
     ) -> io::Result<()> {
         let text = format!(
-            "fwd v{}\nMCP protocol: {}\nWatched directories: {}\n",
+            "inowatch v{}\nMCP protocol: {}\nWatched directories: {}\n",
             env!("CARGO_PKG_VERSION"),
             PROTOCOL_VERSION,
             self.watched_dirs.len()
@@ -438,9 +438,9 @@ impl McpServer {
             }));
         }
 
-        // Add the fwd://watches meta-resource
+        // Add the inowatch://watches meta-resource
         resources.push(json!({
-            "uri": "fwd://watches",
+            "uri": "inowatch://watches",
             "name": "Active Watches",
             "mimeType": "application/json",
             "description": "List of currently watched directories"
@@ -500,8 +500,8 @@ impl McpServer {
             }
         };
 
-        // Handle fwd://watches meta-resource
-        if uri == "fwd://watches" {
+        // Handle inowatch://watches meta-resource
+        if uri == "inowatch://watches" {
             let paths: Vec<String> = self
                 .watched_dirs
                 .iter()
@@ -729,7 +729,7 @@ mod tests {
             "result": {
                 "protocolVersion": "2025-11-25",
                 "capabilities": { "tools": {}, "resources": {} },
-                "serverInfo": { "name": "fwd", "version": env!("CARGO_PKG_VERSION") }
+                "serverInfo": { "name": "inowatch", "version": env!("CARGO_PKG_VERSION") }
             }
         });
         write_msg(&mut output, &response).unwrap();
@@ -775,7 +775,7 @@ mod tests {
         let output_str = String::from_utf8(output).unwrap();
         let parsed: Value = serde_json::from_str(output_str.trim()).unwrap();
         let text = parsed["result"]["content"][0]["text"].as_str().unwrap();
-        assert!(text.contains("fwd v"));
+        assert!(text.contains("inowatch v"));
         assert!(text.contains("MCP protocol"));
     }
 
@@ -804,10 +804,10 @@ mod tests {
         let output_str = String::from_utf8(output).unwrap();
         let parsed: Value = serde_json::from_str(output_str.trim()).unwrap();
         let resources = parsed["result"]["resources"].as_array().unwrap();
-        // Should have at least the fwd://watches meta-resource
+        // Should have at least the inowatch://watches meta-resource
         assert!(!resources.is_empty());
         let uris: Vec<&str> = resources.iter().filter_map(|r| r["uri"].as_str()).collect();
-        assert!(uris.contains(&"fwd://watches"));
+        assert!(uris.contains(&"inowatch://watches"));
     }
 
     #[test]
@@ -860,16 +860,16 @@ mod tests {
     }
 
     #[test]
-    fn test_fwd_read_meta_resource() {
+    fn test_inowatch_read_meta_resource() {
         let mut server = McpServer::new();
         server.initialized = true;
 
-        // Test fwd://watches resource
+        // Test inowatch://watches resource
         let msg = json!({
             "jsonrpc": "2.0",
             "id": 9,
             "method": "resources/read",
-            "params": { "uri": "fwd://watches" }
+            "params": { "uri": "inowatch://watches" }
         });
 
         let mut output = Vec::new();
@@ -877,12 +877,12 @@ mod tests {
 
         let output_str = String::from_utf8(output).unwrap();
         let parsed: Value = serde_json::from_str(output_str.trim()).unwrap();
-        assert_eq!(parsed["result"]["contents"][0]["uri"], "fwd://watches");
+        assert_eq!(parsed["result"]["contents"][0]["uri"], "inowatch://watches");
         assert_eq!(parsed["result"]["contents"][0]["mimeType"], "application/json");
     }
 
     #[test]
-    fn test_fwd_read_nonexistent_file() {
+    fn test_inowatch_read_nonexistent_file() {
         let mut server = McpServer::new();
         server.initialized = true;
 
@@ -890,7 +890,7 @@ mod tests {
             "jsonrpc": "2.0",
             "id": 10,
             "method": "resources/read",
-            "params": { "uri": "file:///tmp/__nonexistent_file_fwd_test__" }
+            "params": { "uri": "file:///tmp/__nonexistent_file_inowatch_test__" }
         });
 
         let mut output = Vec::new();
