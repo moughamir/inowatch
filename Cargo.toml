@@ -1,11 +1,18 @@
 [package]
-name = "fwd"
-version = "0.1.0"
+name = "inowatch"
+version = "0.1.2"
 edition = "2024"
+license = "AGPL-3.0-only"
+description = "File Watch Daemon — watches filesystem changes and emits NDJSON or serves MCP"
+documentation = "https://github.com/moughamir/inowatch#readme"
+homepage = "https://github.com/moughamir/inowatch"
+repository = "https://github.com/moughamir/inowatch"
 
 [dependencies]
-clap = "4.6.1"
+clap = { version = "4.6.1", features = ["derive"] }
 libc = "0.2.186"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 [profile.release]
 lto = true
 strip = true
