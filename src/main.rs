@@ -161,13 +161,19 @@ fn main() {
 
     let _ = thread::scope(|s| {
         s.spawn(|| {
-            let _ = watcher_handle.join();
+            if let Err(e) = watcher_handle.join() {
+                eprintln!("Watcher thread panicked: {:?}", e);
+            }
         });
         s.spawn(|| {
-            let _ = coalescer_handle.join();
+            if let Err(e) = coalescer_handle.join() {
+                eprintln!("Coalescer thread panicked: {:?}", e);
+            }
         });
         s.spawn(|| {
-            let _ = emitter_handle.join();
+            if let Err(e) = emitter_handle.join() {
+                eprintln!("Emitter thread panicked: {:?}", e);
+            }
         });
     });
 
