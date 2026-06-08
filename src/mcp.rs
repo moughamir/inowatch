@@ -479,6 +479,15 @@ impl McpServer {
         }))
     }
 
+    /// Check if a path is within any watched directory.
+    /// Canonicalizes the path first to prevent symlink traversal.
+    fn is_path_in_watched_dirs(&self, path: &std::path::Path) -> bool {
+        let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+        self.watched_dirs
+            .iter()
+            .any(|watched| canonical.starts_with(watched))
+    }
+
     fn handle_resources_read(
         &self,
         writer: &mut impl Write,
@@ -527,6 +536,15 @@ impl McpServer {
                 return write_msg(writer, &json!({
                     "jsonrpc": "2.0", "id": id,
                     "error": { "code": -32002, "message": "Resource not found", "data": { "uri": uri } }
+                }));
+            }
+
+            // Security: restrict file reads to watched directories only.
+            // Prevents MCP clients from reading arbitrary system files.
+            if !self.is_path_in_watched_dirs(file_path) {
+                return write_msg(writer, &json!({
+                    "jsonrpc": "2.0", "id": id,
+                    "error": { "code": -32002, "message": "Resource not allowed: only watched directories are accessible" }
                 }));
             }
 
