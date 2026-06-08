@@ -14,6 +14,8 @@ use std::thread;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// File Watch Daemon — watches filesystem changes and emits NDJSON to stdout.
+/// Use --mcp for Model Context Protocol (JSON-RPC 2.0) mode on stdin/stdout.
 #[derive(Parser, Debug)]
 #[command(name = "fwd", version = VERSION, about)]
 struct Args {

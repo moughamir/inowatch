@@ -87,7 +87,7 @@ impl McpServer {
                     "result": {
                         "protocolVersion": PROTOCOL_VERSION,
                         "capabilities": {
-                            "tools": {}, // TODO: Investigate MCP capabalities
+                            "tools": {},
                             "resources": {}
                         },
                         "serverInfo": {
@@ -645,7 +645,6 @@ fn mime_from_extension(path: &std::path::Path) -> Option<&'static str> {
 }
 
 /// Minimal base64 encoding for binary resource data.
-/// TODO: Enhance base64 encoding
 fn base64_encode(bytes: &[u8]) -> String {
     const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut result = String::with_capacity(bytes.len().div_ceil(3) * 4);
