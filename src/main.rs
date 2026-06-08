@@ -14,8 +14,6 @@ use std::thread;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// File Watch Daemon — watches filesystem changes and emits NDJSON to stdout.
-/// Use --mcp for Model Context Protocol (JSON-RPC 2.0) mode on stdin/stdout.
 #[derive(Parser, Debug)]
 #[command(name = "fwd", version = VERSION, about)]
 struct Args {
@@ -32,7 +30,7 @@ struct Args {
     pidfile: Option<PathBuf>,
 
     /// Event debounce/coalescing window in milliseconds.
-    #[arg(long, default_value = "50")]
+    #[arg(long, default_value = "500")]
     debounce: u64,
 
     /// Do not watch subdirectories recursively.
