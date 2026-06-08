@@ -269,6 +269,27 @@ impl McpServer {
         }
     }
 
+    /// Check if watching a path is allowed.
+    /// Blocks sensitive system directories to prevent resource exhaustion
+    /// and monitoring of privileged paths by MCP clients.
+    fn is_watch_allowed(&self, path: &std::path::Path) -> bool {
+        // Block known sensitive system directories
+        let sensitive_prefixes = [
+            "/etc",
+            "/proc",
+            "/sys",
+            "/dev",
+            "/run",
+            "/boot",
+            "/lost+found",
+            "/root",
+        ];
+        let path_str = path.to_string_lossy();
+        !sensitive_prefixes
+            .iter()
+            .any(|&prefix| path_str == prefix || path_str.starts_with(&format!("{}/", prefix)))
+    }
+
     fn tool_watch(
         &mut self,
         writer: &mut impl Write,
@@ -294,6 +315,14 @@ impl McpServer {
         }
 
         let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+
+        // Security: validate path is not a sensitive system directory
+        if !self.is_watch_allowed(&canonical) {
+            return write_msg(writer, &json!({
+                "jsonrpc": "2.0", "id": id,
+                "result": { "content": [{ "type": "text", "text": format!("Error: watching system directory is not allowed: {}", canonical.display()) }], "isError": true }
+            }));
+        }
 
         if self.watched_dirs.contains(&canonical) {
             return write_msg(writer, &json!({
