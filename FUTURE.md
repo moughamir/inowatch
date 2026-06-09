@@ -3,6 +3,7 @@
 ## Problem
 
 `inowatch` is Linux-only due to inotify and POSIX-specific system calls:
+
 - **`src/watch.rs`**: inotify initialization, watch descriptors, and raw `libc` syscalls.
 - **`src/signal.rs`**: POSIX `signal()` for SIGINT/SIGTERM/SIGPIPE.
 - **`src/main.rs`**: Unix double-fork daemonisation, `/dev/null` redirection, `/proc` inotify limit check.
@@ -15,11 +16,10 @@ The `notify` crate (v7.x) provides a `RecommendedWatcher` that uses `ReadDirecto
 
 ## Target Architecture
 
-```
+```rust
 trait WatcherImpl
   ├─ InotifyWatcher    (Linux — existing code, gated by #[cfg(target_os = "linux")])
   └─ NotifyWatcher     (Windows — new code, gated by #[cfg(target_os = "windows")])
-
 pub struct Watcher {
     inner: Box<dyn WatcherImpl>,
 }
@@ -27,15 +27,15 @@ pub struct Watcher {
 
 ## Files to Change
 
-| File | Change |
-|------|--------|
-| `Cargo.toml` | Add `notify` (v7.x) Windows-only dependency. |
-| `src/watch_notify.rs` | **NEW** — `NotifyWatcher` implementing `WatcherImpl` via `notify::RecommendedWatcher` + polling backend. |
-| `src/watch.rs` | Extract `WatcherImpl` trait, move inotify code into Linux-gated impl, add `pub struct Watcher` wrapper. |
-| `src/signal.rs` | Gate POSIX `signal()` calls behind `#[cfg(unix)]`; add Windows stub (Ctrl+C default is sufficient). |
-| `src/main.rs` | Gate `daemonize()` and `check_watch_limit()` behind `#[cfg(unix)]`; show warning on Windows. |
-| `src/mcp.rs` | Update tool description from "using inotify" to "filesystem changes". |
-| `README.md` | Note Windows support and Unix-only daemon mode. |
+| File                  | Change                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------- |
+| `Cargo.toml`          | Add `notify` (v7.x) Windows-only dependency.                                                            |
+| `src/watch_notify.rs` | **NEW** — `NotifyWatcher` implementing `WatcherImpl` via `notify::RecommendedWatcher`.                  |
+| `src/watch.rs`        | Extract `WatcherImpl` trait, move inotify code into Linux-gated impl, add `pub struct Watcher` wrapper. |
+| `src/signal.rs`       | Gate POSIX `signal()` calls behind `#[cfg(unix)]`; add Windows stub (Ctrl+C default is sufficient).     |
+| `src/main.rs`         | Gate `daemonize()` and `check_watch_limit()` behind `#[cfg(unix)]`; show warning on Windows.            |
+| `src/mcp.rs`          | Update tool description from "using inotify" to "filesystem changes".                                   |
+| `README.md`           | Note Windows support and Unix-only daemon mode.                                                         |
 
 ## Implementation Notes
 
