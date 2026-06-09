@@ -6,6 +6,8 @@
 
 Watches filesystem changes via **inotify** and emits structured events to stdout as **NDJSON** (newline-delimited JSON). Also ships a **Model Context Protocol** mode for JSON-RPC 2.0 integration.
 
+> **TODO:** Windows support is planned for a future release. The daemon will use the `notify` crate (`ReadDirectoryChangesW` backend) to provide equivalent filesystem watching on Windows. See `FUTURE.md` for details.
+
 ---
 
 ## Installation
